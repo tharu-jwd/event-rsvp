@@ -12,19 +12,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build Docker image
-        run: docker build -t my-devops-app:latest .
+      - name: Build API image
+        run: docker build -t my-devops-api:latest .
 
-      - name: Save Docker image
-        run: docker save my-devops-app:latest | gzip > app.tar.gz
+      - name: Build client image
+        run: docker build -t my-devops-client:latest ./client
 
-      - name: Copy image to EC2
+      - name: Save images
+        run: |
+          docker save my-devops-api:latest | gzip > api.tar.gz
+          docker save my-devops-client:latest | gzip > client.tar.gz
+
+      - name: Copy to EC2
         uses: appleboy/scp-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: app.tar.gz
+          source: "api.tar.gz,client.tar.gz,nginx.conf"
           target: ~/
 
       - name: Deploy on EC2
@@ -34,12 +39,36 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            docker load < ~/app.tar.gz
-            docker stop my-devops-app || true
-            docker rm my-devops-app || true
+            # Load images
+            docker load < ~/api.tar.gz
+            docker load < ~/client.tar.gz
+
+            # Stop and remove old containers
+            docker stop my-devops-api my-devops-client || true
+            docker rm my-devops-api my-devops-client || true
+
+            # Ensure data directory exists
+            mkdir -p ~/data
+
+            # Start API
             docker run -d \
-              --name my-devops-app \
+              --name my-devops-api \
               --restart unless-stopped \
               -p 3000:3000 \
-              my-devops-app:latest
-            docker ps | grep my-devops-app
+              -v ~/data:/app/data \
+              -e ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
+              my-devops-api:latest
+
+            # Start client
+            docker run -d \
+              --name my-devops-client \
+              --restart unless-stopped \
+              -p 3001:3000 \
+              my-devops-client:latest
+
+            # Update nginx and reload
+            sudo cp ~/nginx.conf /etc/nginx/sites-available/default
+            sudo nginx -t && sudo systemctl reload nginx
+
+            # Verify both containers are running
+            docker ps | grep my-devops
