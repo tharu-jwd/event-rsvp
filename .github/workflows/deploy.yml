@@ -14,15 +14,15 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Build API image
-        run: docker build -t my-devops-api:latest .
+        run: docker build -t event-rsvp-api:latest .
 
       - name: Build client image
-        run: docker build -t my-devops-client:latest ./client
+        run: docker build -t event-rsvp-client:latest ./client
 
       - name: Save images
         run: |
-          docker save my-devops-api:latest | gzip > api.tar.gz
-          docker save my-devops-client:latest | gzip > client.tar.gz
+          docker save event-rsvp-api:latest | gzip > api.tar.gz
+          docker save event-rsvp-client:latest | gzip > client.tar.gz
 
       - name: Copy to EC2
         uses: appleboy/scp-action@master
@@ -44,32 +44,32 @@ jobs:
             docker load < ~/api.tar.gz
             docker load < ~/client.tar.gz
 
-            # Stop and remove old containers
-            docker stop my-devops-api my-devops-client || true
-            docker rm my-devops-api my-devops-client || true
+            # Stop and remove old containers (including legacy names)
+            docker stop my-devops-api my-devops-client my-devops-app || true
+            docker rm my-devops-api my-devops-client my-devops-app || true
 
             # Ensure data directory exists
             mkdir -p ~/data
 
             # Start API
             docker run -d \
-              --name my-devops-api \
+              --name event-rsvp-api \
               --restart unless-stopped \
               -p 3000:3000 \
               -v ~/data:/app/data \
               -e ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
-              my-devops-api:latest
+              event-rsvp-api:latest
 
             # Start client
             docker run -d \
-              --name my-devops-client \
+              --name event-rsvp-client \
               --restart unless-stopped \
               -p 3001:3000 \
-              my-devops-client:latest
+              event-rsvp-client:latest
 
             # Update nginx and reload
             sudo cp ~/nginx.conf /etc/nginx/sites-available/default
             sudo nginx -t && sudo systemctl reload nginx
 
             # Verify both containers are running
-            docker ps | grep my-devops
+            docker ps | grep event-rsvp
