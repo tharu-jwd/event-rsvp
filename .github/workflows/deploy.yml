@@ -71,5 +71,8 @@ jobs:
             sudo cp ~/nginx.conf /etc/nginx/sites-available/default
             sudo nginx -t && sudo systemctl reload nginx
 
+            # Clean up dangling images
+            docker image prune -f
+
             # Verify both containers are running
             docker ps | grep event-rsvp
