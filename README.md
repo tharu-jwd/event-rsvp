@@ -1,48 +1,71 @@
-# AWS DevOps Portfolio Project
+# Event RSVP
 
-A Node.js application containerized with Docker and deployed to AWS EC2 with a fully automated CI/CD pipeline using GitHub Actions.
+A full-stack event registration app built with Next.js and Node.js — containerized with Docker and deployed to AWS EC2 via an automated GitHub Actions CI/CD pipeline.
 
 ## Live Demo
 http://13.60.89.129
 
 ## Architecture
-GitHub (code) → GitHub Actions (CI/CD) → AWS EC2 (Docker container) → nginx (reverse proxy) → Port 80
+```
+GitHub → GitHub Actions (CI/CD) → AWS EC2 → nginx (port 80)
+                                              ├── /api/* → Express API (port 3000)
+                                              └── /*     → Next.js client (port 3001)
+```
 
 ## Tech Stack
-- **App:** Node.js + Express
-- **Container:** Docker (node:18-alpine)
+- **Frontend:** Next.js, Tailwind CSS
+- **Backend:** Node.js, Express
+- **Container:** Docker (node:18-alpine, multi-stage build)
 - **Cloud:** AWS EC2 (t3.micro, Ubuntu 24.04)
 - **CI/CD:** GitHub Actions
-- **Web Server:** nginx (reverse proxy)
-- **Networking:** AWS Security Groups
+- **Web Server:** nginx (reverse proxy, gzip, security headers)
+
+## Features
+- Public RSVP page with live attendee count
+- Form validation and duplicate email detection
+- Password-protected admin dashboard
+- CSV export of registrations
+- Data persisted via Docker volume (JSON file)
+
+## API Endpoints
+- `GET /api/event` — event details and registration count
+- `POST /api/rsvp` — submit a registration
+- `GET /api/rsvps` — all registrations (admin)
+- `DELETE /api/rsvps/:id` — remove a registration (admin)
+- `GET /health` — health check
 
 ## CI/CD Pipeline
 Every push to `main` automatically:
-1. Builds a Docker image
-2. Transfers the image to EC2 via SCP
-3. Stops the old container
-4. Starts the new container
-5. App is live within ~2 minutes of pushing code
+1. Builds Docker images for API and client
+2. Transfers images to EC2 via SCP
+3. Replaces running containers
+4. Updates nginx config and reloads
+5. Runs a health check to confirm deployment
 
-## Infrastructure Setup
-- AWS IAM user with least-privilege permissions (EC2FullAccess only)
-- EC2 Security Groups restricting traffic to ports 22, 80, 443, and 3000
-- SSH key authentication (no password login)
-- GitHub Actions secrets for secure credential storage (never in code)
-- nginx reverse proxy routing port 80 traffic to the Node.js app on port 3000
-- Docker container configured with `--restart unless-stopped` for automatic recovery on reboot
+## Infrastructure
+- AWS IAM with least-privilege permissions
+- EC2 Security Groups (ports 22, 80, 443, 3000)
+- SSH key authentication
+- GitHub Actions Secrets for credentials
+- Docker `--restart unless-stopped` for automatic recovery
 
-## API Endpoints
-- `GET /` — returns app info and timestamp
-- `GET /health` — health check endpoint
+## Local Development
+```bash
+# API (port 3000)
+npm install
+node index.js
+
+# Client (port 3001)
+cd client
+cp .env.example .env.local
+npm install
+npm run dev
+```
 
 ## What I Would Add Next
-- HTTPS via Let's Encrypt SSL certificate
-- nginx improvements
+- HTTPS via Let's Encrypt
 - Domain name via AWS Route 53
-- Terraform
-- AWS ECR
-- CloudWatch 
-- RDS Database
-- Load balancer (ALB) 
-- Kubernetes (EKS)
+- AWS ECR for image registry
+- CloudWatch for logging and monitoring
+- RDS or DynamoDB for persistent storage
+- Terraform for infrastructure as code
