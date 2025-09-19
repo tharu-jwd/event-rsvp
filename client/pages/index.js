@@ -53,25 +53,25 @@ export default function Home() {
 
           {/* Event card */}
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 px-6 py-8 text-white">
-              <p className="text-indigo-200 text-xs font-semibold uppercase tracking-widest mb-3">
+            <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 px-6 py-8 text-white">
+              <p className="text-emerald-200 text-xs font-semibold uppercase tracking-widest mb-3">
                 Upcoming Event
               </p>
               <h1 className="text-2xl font-bold mb-5">
                 {event?.title || <span className="opacity-40">Loading...</span>}
               </h1>
-              <div className="space-y-2 text-sm text-indigo-100">
-                <p>📅 {event?.date}</p>
-                <p>🕙 {event?.time}</p>
-                <p>📍 {event?.location}</p>
+              <div className="space-y-2 text-sm text-emerald-100">
+                <p>{event?.date}</p>
+                <p>{event?.time}</p>
+                <p>{event?.location}</p>
               </div>
             </div>
 
             <div className="px-6 py-5">
               <p className="text-gray-500 text-sm leading-relaxed">{event?.description}</p>
               <div className="mt-4">
-                <span className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 text-sm font-semibold px-3 py-1.5 rounded-full">
-                  <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
+                <span className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 text-sm font-semibold px-3 py-1.5 rounded-full">
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
                   {event?.count ?? '–'} people registered
                 </span>
               </div>
@@ -82,7 +82,6 @@ export default function Home() {
           <div className="bg-white rounded-2xl shadow-sm p-6">
             {status === 'success' ? (
               <div className="text-center py-8">
-                <div className="text-5xl mb-4">🎉</div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-1">You&apos;re in!</h2>
                 <p className="text-gray-400 text-sm">See you there.</p>
               </div>
@@ -98,7 +97,7 @@ export default function Home() {
                       placeholder="Your name"
                       value={form.name}
                       onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                     />
                   </div>
                   <div>
@@ -109,7 +108,7 @@ export default function Home() {
                       placeholder="you@example.com"
                       value={form.email}
                       onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition"
                     />
                   </div>
 
@@ -118,7 +117,7 @@ export default function Home() {
                   <button
                     type="submit"
                     disabled={status === 'loading'}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white font-medium py-2.5 rounded-lg text-sm transition-colors"
                   >
                     {status === 'loading' ? 'Registering...' : 'Register now →'}
                   </button>
