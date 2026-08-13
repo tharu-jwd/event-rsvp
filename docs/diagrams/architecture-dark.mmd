@@ -1,0 +1,12 @@
+%%{init: {"theme":"base", "fontFamily":"Avenir Next, Helvetica Neue, Arial, sans-serif", "themeVariables": {
+  "primaryColor":"transparent", "primaryTextColor":"#ffffff", "primaryBorderColor":"#b0b0b0",
+  "lineColor":"#b0b0b0", "textColor":"#ffffff",
+  "fontFamily":"Avenir Next, Helvetica Neue, Arial, sans-serif",
+  "edgeLabelBackground":"transparent", "tertiaryColor":"transparent", "clusterBkg":"transparent"
+}}}%%
+flowchart LR
+  Browser["<span style='color:#7CC4FF'>Browser</span>"] -->|":80"| Nginx["<span style='color:#7CC4FF'>nginx</span><br/><br/>reverse proxy"]
+  Nginx -->|"/api/*"| API["<span style='color:#7CC4FF'>Express API</span><br/><br/>:3000"]
+  Nginx -->|"/*"| Client["<span style='color:#7CC4FF'>Next.js client</span><br/><br/>:3001"]
+  Client -->|"fetch, credentials included"| API
+  API --> DB[("<span style='color:#7CC4FF'>SQLite</span><br/><br/>data/app.db")]

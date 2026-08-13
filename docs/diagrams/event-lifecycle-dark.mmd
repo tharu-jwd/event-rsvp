@@ -1,0 +1,13 @@
+%%{init: {"theme":"base", "fontFamily":"Avenir Next, Helvetica Neue, Arial, sans-serif", "themeVariables": {
+  "primaryColor":"transparent", "primaryTextColor":"#ffffff", "primaryBorderColor":"#b0b0b0",
+  "lineColor":"#b0b0b0", "textColor":"#ffffff",
+  "fontFamily":"Avenir Next, Helvetica Neue, Arial, sans-serif",
+  "edgeLabelBackground":"transparent", "tertiaryColor":"transparent", "clusterBkg":"transparent"
+}}}%%
+stateDiagram-v2
+  [*] --> Published: organizer creates event
+  Published --> Cancelled: organizer cancels
+  Published --> Started: starts_at reached, RSVPs close
+  Started --> Completed: event has passed
+  Cancelled --> [*]
+  Completed --> [*]

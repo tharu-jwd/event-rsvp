@@ -1,0 +1,24 @@
+%%{init: {"theme":"base", "fontFamily":"Avenir Next, Helvetica Neue, Arial, sans-serif", "themeVariables": {
+  "primaryColor":"transparent", "primaryTextColor":"#111111", "primaryBorderColor":"#333333",
+  "lineColor":"#333333", "textColor":"#111111",
+  "fontFamily":"Avenir Next, Helvetica Neue, Arial, sans-serif",
+  "edgeLabelBackground":"transparent", "tertiaryColor":"transparent", "clusterBkg":"transparent",
+  "actorBkg":"transparent", "actorBorder":"#333333", "actorTextColor":"#111111",
+  "signalColor":"#333333", "signalTextColor":"#111111",
+  "labelBoxBkgColor":"transparent", "labelBoxBorderColor":"#333333", "labelTextColor":"#111111",
+  "loopTextColor":"#111111", "noteBkgColor":"transparent", "noteBorderColor":"#1F6FEB", "noteTextColor":"#111111"
+}}}%%
+sequenceDiagram
+  participant UA as User A
+  participant UB as User B
+  participant API as Express API
+  participant DB as SQLite (1 seat left)
+
+  UA->>API: POST rsvp (attending)
+  UB->>API: POST rsvp (attending)
+  API->>DB: Txn A: BEGIN IMMEDIATE (takes the write lock)
+  Note over DB: Txn B waits for the lock
+  API->>DB: Txn A: count shows 1 seat free, insert, COMMIT
+  API-->>UA: 201 Created
+  API->>DB: Txn B: lock acquired, re-reads count, now at capacity
+  API-->>UB: 409 Conflict

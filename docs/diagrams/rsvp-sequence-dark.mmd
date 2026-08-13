@@ -1,0 +1,29 @@
+%%{init: {"theme":"base", "fontFamily":"Avenir Next, Helvetica Neue, Arial, sans-serif", "themeVariables": {
+  "primaryColor":"transparent", "primaryTextColor":"#ffffff", "primaryBorderColor":"#b0b0b0",
+  "lineColor":"#b0b0b0", "textColor":"#ffffff",
+  "fontFamily":"Avenir Next, Helvetica Neue, Arial, sans-serif",
+  "edgeLabelBackground":"transparent", "tertiaryColor":"transparent", "clusterBkg":"transparent",
+  "actorBkg":"transparent", "actorBorder":"#b0b0b0", "actorTextColor":"#ffffff",
+  "signalColor":"#b0b0b0", "signalTextColor":"#ffffff",
+  "labelBoxBkgColor":"transparent", "labelBoxBorderColor":"#b0b0b0", "labelTextColor":"#ffffff",
+  "loopTextColor":"#ffffff", "noteBkgColor":"transparent", "noteBorderColor":"#b0b0b0", "noteTextColor":"#ffffff"
+}}}%%
+sequenceDiagram
+  participant A as Attendee
+  participant F as Next.js client
+  participant API as Express API
+  participant DB as SQLite
+
+  A->>F: Fill in name/email, click "I'll be there"
+  F->>API: POST /events/:slug/rsvp
+  API->>DB: BEGIN IMMEDIATE
+  API->>DB: count attendees WHERE event_id = ?
+  alt seats remaining
+    API->>DB: insert/update RSVP, COMMIT
+    API-->>F: 201 Created
+    F-->>A: "You're in!"
+  else event full
+    API->>DB: ROLLBACK
+    API-->>F: 409 Conflict
+    F-->>A: "This event is full"
+  end

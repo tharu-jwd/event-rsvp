@@ -10,10 +10,10 @@ A small full-stack app for running RSVPs on a real event: an organizer creates a
 
 Most of what makes this interesting isn't the forms, it's what happens when two requests hit the same event at once:
 
-- **Capacity is enforced inside a database transaction**, not with a "check the count, then insert" pattern that races under concurrent requests. Two attendees competing for the last seat get exactly one acceptance and one `409 Conflict`, never two acceptances. See [ADR 1](docs/adr/0001-sqlite-for-capacity-enforcement.md).
-- **RSVPs are unique per attendee per event at the database level**, not just in application code, so a double-click or a retried request can't create a duplicate. See [ADR 2](docs/adr/0002-rsvp-uniqueness.md).
-- **Authorization is checked server-side against event ownership.** An organizer can only edit or cancel their own events; the frontend hiding a button is not the security boundary.
-- **Times are stored as UTC and converted at the client**, so an event created by an organizer in one timezone shows the correct local time to an attendee in another. See [ADR 4](docs/adr/0004-timezone-strategy.md).
+- **Capacity is enforced inside a database transaction**, not a "check the count, then insert" pattern that races under concurrent requests. Two attendees competing for the last seat get exactly one acceptance and one `409 Conflict`, never two. ([ADR 1](docs/adr/0001-sqlite-for-capacity-enforcement.md))
+- RSVP uniqueness is a database constraint, not just an application check, so a double-click or a retried request can't leave a duplicate behind. ([ADR 2](docs/adr/0002-rsvp-uniqueness.md))
+- Editing or cancelling an event checks ownership server-side. Hiding a button on the frontend was never the security boundary.
+- Event times are stored in UTC and converted at the client, so an organizer in one timezone and an attendee in another both see the correct local time. ([ADR 4](docs/adr/0004-timezone-strategy.md))
 
 ## More screenshots
 
@@ -34,6 +34,16 @@ An organizer registers, creates an event with a title, description, location, st
 
 ## Architecture
 
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/architecture-dark.png">
+    <img src="docs/diagrams/architecture-light.png" alt="Architecture: browser to nginx to Next.js client and Express API to SQLite" width="640">
+  </picture>
+</p>
+
+<details>
+<summary>Mermaid source</summary>
+
 ```mermaid
 flowchart LR
   Browser -->|":80"| Nginx["nginx<br/>reverse proxy"]
@@ -43,6 +53,8 @@ flowchart LR
   API --> DB[("SQLite<br/>data/app.db")]
 ```
 
+</details>
+
 Two containers behind nginx on one EC2 instance: a Next.js (Pages Router) client and an Express API, backed by a single SQLite file. No separate database service, no message queue, no service mesh, it's a monolith and stays one on purpose (see [ADR 3](docs/adr/0003-modular-monolith.md)).
 
 GitHub Actions builds both Docker images on every push to `main`, ships them to the EC2 instance over SSH, and runs a health check after restarting the containers.
@@ -50,6 +62,16 @@ GitHub Actions builds both Docker images on every push to `main`, ships them to 
 ## RSVP and capacity correctness
 
 The core guarantee: an event with capacity 100 never ends up with 101 confirmed attendees, no matter how the requests are timed.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/rsvp-sequence-dark.png">
+    <img src="docs/diagrams/rsvp-sequence-light.png" alt="RSVP sequence: attendee submits, API checks capacity inside a transaction, accepts or rejects" width="640">
+  </picture>
+</p>
+
+<details>
+<summary>Mermaid source</summary>
 
 ```mermaid
 sequenceDiagram
@@ -73,7 +95,19 @@ sequenceDiagram
   end
 ```
 
+</details>
+
 `BEGIN IMMEDIATE` takes SQLite's write lock at the start of the transaction rather than when the first write runs, which is what actually closes the race. Here's the scenario that matters, with one seat left and two attendees RSVPing at nearly the same instant:
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/concurrent-race-dark.png">
+    <img src="docs/diagrams/concurrent-race-light.png" alt="Two concurrent RSVP requests for the last seat: one gets 201, the other gets 409" width="640">
+  </picture>
+</p>
+
+<details>
+<summary>Mermaid source</summary>
 
 ```mermaid
 sequenceDiagram
@@ -92,11 +126,23 @@ sequenceDiagram
   API-->>UB: 409 Conflict
 ```
 
+</details>
+
 Txn B doesn't see the stale "1 seat free" that existed when its request arrived; it sees whatever Txn A actually left behind, because it couldn't proceed until Txn A committed. This is tested directly in `test/rsvp.test.js`, which fires two RSVP requests concurrently at a one-seat event and asserts on the exact pair of response codes.
 
 Full reasoning, including why SQLite over Postgres for this project, in [ADR 1](docs/adr/0001-sqlite-for-capacity-enforcement.md). Specific edge cases (organizer lowers capacity below attendance, event starts mid-RSVP, response lost after a successful write) are written up in [docs/engineering-notes.md](docs/engineering-notes.md).
 
 ## Event lifecycle
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/diagrams/event-lifecycle-dark.png">
+    <img src="docs/diagrams/event-lifecycle-light.png" alt="Event lifecycle: published, then cancelled or started, then completed" width="420">
+  </picture>
+</p>
+
+<details>
+<summary>Mermaid source</summary>
 
 ```mermaid
 stateDiagram-v2
@@ -107,6 +153,8 @@ stateDiagram-v2
   Cancelled --> [*]
   Completed --> [*]
 ```
+
+</details>
 
 ## Application structure
 
@@ -203,10 +251,13 @@ npm test
 
 ## Deliberate limitations
 
-- **Attendees aren't authenticated.** Modifying an RSVP requires knowing the email it was made with, not a login. Reasonable for a low-stakes event RSVP, not something to build on for anything higher-stakes. ([ADR 5](docs/adr/0005-attendee-identity-by-email.md))
-- **One SQLite file.** Correct and simple for one API process; would need to move to Postgres if this ever ran as multiple API instances behind a load balancer. ([ADR 1](docs/adr/0001-sqlite-for-capacity-enforcement.md))
-- **No explicit per-event timezone field.** Event time is inferred from the organizer's browser at creation time. Correct for single-location or single-timezone-audience events, not for something aimed at a genuinely global audience. ([ADR 4](docs/adr/0004-timezone-strategy.md))
-- **No email notifications, waitlists, or check-in.** Not built because they're not needed to demonstrate the parts of this project that are actually interesting, not because they were forgotten.
+Attendees aren't authenticated: modifying an RSVP just requires knowing the email it was made with, not a login. That's a fine trade for a low-stakes event RSVP and not something to build on for anything higher-stakes. ([ADR 5](docs/adr/0005-attendee-identity-by-email.md))
+
+There's one SQLite file, correct and simple for one API process. If this ever needed to run as multiple API instances behind a load balancer, that's the point where it would move to Postgres, not before. ([ADR 1](docs/adr/0001-sqlite-for-capacity-enforcement.md))
+
+There's no explicit per-event timezone field. Event time is inferred from the organizer's browser at creation time, which is correct for a single-location or single-audience event but wouldn't hold up for something aimed at a genuinely global audience. ([ADR 4](docs/adr/0004-timezone-strategy.md))
+
+No email notifications, waitlists, or check-in. They're not built because they're not needed to demonstrate the parts of this project that are actually interesting, not because they were forgotten.
 
 ## Infrastructure
 
