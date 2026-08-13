@@ -1,17 +1,26 @@
 {
-  "name": "my-devops-app",
+  "name": "event-rsvp-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "API for the event RSVP platform",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "seed": "node server/seed.js",
+    "test": "node --test test/*.test.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.8.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0"
   }
 }

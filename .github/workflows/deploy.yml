@@ -52,12 +52,19 @@ jobs:
             mkdir -p ~/data
 
             # Start API
+            #
+            # NODE_ENV is deliberately NOT set to "production" here: that flag
+            # also makes the session cookie "secure" (HTTPS-only), and this
+            # deployment is plain HTTP for now (see "What I'd add next" in
+            # the README). Setting it would make browsers silently drop the
+            # cookie and break organizer login. Set it once HTTPS is in front
+            # of this instance.
             docker run -d \
               --name event-rsvp-api \
               --restart unless-stopped \
               -p 3000:3000 \
               -v ~/data:/app/data \
-              -e ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
+              -e CLIENT_ORIGIN=http://${{ secrets.EC2_HOST }} \
               event-rsvp-api:latest
 
             # Start client

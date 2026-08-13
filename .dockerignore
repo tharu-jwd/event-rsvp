@@ -5,3 +5,5 @@ data
 .git
 .gitignore
 README.md
+docs
+test
