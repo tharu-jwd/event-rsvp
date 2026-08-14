@@ -6,15 +6,6 @@ A small full-stack app for running RSVPs on a real event: an organizer creates a
   <img src="docs/screenshots/event-detail.png" alt="Event detail page showing capacity and RSVP form" width="420">
 </p>
 
-## Why this is more than CRUD
-
-Most of what makes this interesting isn't the forms, it's what happens when two requests hit the same event at once:
-
-- **Capacity is enforced inside a database transaction**, not with a "check the count, then insert" pattern that races under concurrent requests. Two attendees competing for the last seat get exactly one acceptance and one `409 Conflict`, never two acceptances. See [ADR 1](docs/adr/0001-sqlite-for-capacity-enforcement.md).
-- **RSVPs are unique per attendee per event at the database level**, not just in application code, so a double-click or a retried request can't create a duplicate. See [ADR 2](docs/adr/0002-rsvp-uniqueness.md).
-- **Authorization is checked server-side against event ownership.** An organizer can only edit or cancel their own events; the frontend hiding a button is not the security boundary.
-- **Times are stored as UTC and converted at the client**, so an event created by an organizer in one timezone shows the correct local time to an attendee in another. See [ADR 4](docs/adr/0004-timezone-strategy.md).
-
 ## More screenshots
 
 <table>
@@ -214,9 +205,3 @@ npm test
 - nginx: reverse proxy, gzip, security headers
 - GitHub Actions: build both images on push to `main`, ship over SSH, restart containers, health check
 - IAM least-privilege, security groups scoped to the ports actually in use, SSH key auth, secrets in GitHub Actions Secrets
-
-## What I'd add next
-
-- HTTPS via Let's Encrypt and a real domain
-- Postgres, if this ever needed more than one API process
-- Per-RSVP magic links, to remove the email-as-credential limitation without building full attendee accounts
